@@ -190,6 +190,28 @@ select { font-family: inherit; }
 }
 .btn-trigger:hover { border-color: var(--accent); background: var(--bg-hover); transform: translateY(-1px); }
 
+/* User digest */
+.profile-digest-section {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px;
+}
+.profile-digest {
+  display: flex; flex-direction: column; gap: 14px;
+}
+.digest-person {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+}
+.digest-person strong { font-size: 16px; color: var(--text-primary); }
+.digest-person span { color: var(--text-secondary); font-size: 13px; }
+.profile-digest pre {
+  white-space: pre-wrap; word-break: break-word;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  color: var(--text-secondary); font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px; line-height: 1.6;
+}
+.digest-empty { color: var(--text-muted); font-size: 14px; }
+
 /* ─── Metrics Grid ──────────────────────────────────────────── */
 .metrics-grid {
   display: grid;

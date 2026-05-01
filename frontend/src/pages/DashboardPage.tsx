@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { appApi, jobsApi } from '../api/client';
+import { appApi, jobsApi, profileApi } from '../api/client';
 import toast from 'react-hot-toast';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -26,6 +26,13 @@ interface RecentApp {
 }
 
 interface EngineStatus { running: boolean; nextRun: string | null }
+
+interface ProfileDigest {
+  isSetupComplete: boolean;
+  fullName?: string;
+  headline?: string;
+  userDigest?: string;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
@@ -69,21 +76,24 @@ export default function DashboardPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [recent, setRecent] = useState<RecentApp[]>([]);
   const [engine, setEngine] = useState<EngineStatus | null>(null);
+  const [profile, setProfile] = useState<ProfileDigest | null>(null);
   const [chartData, setChartData] = useState<{ date: string; applied: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const [mRes, rRes, eRes, allRes] = await Promise.all([
+      const [mRes, rRes, eRes, allRes, pRes] = await Promise.all([
         appApi.getMetrics(),
         appApi.getRecent(10),
         jobsApi.getEngineStatus(),
         appApi.getAll({ limit: 90 }),
+        profileApi.get(),
       ]);
       setMetrics(mRes.data);
       setRecent(rRes.data);
       setEngine(eRes.data);
+      setProfile(pRes.data);
 
       // Build 14-day chart data
       const apps: { appliedAt: string }[] = allRes.data.applications;
@@ -168,6 +178,23 @@ export default function DashboardPage() {
       </header>
 
       {/* ── Metric Cards ── */}
+      <section className="profile-digest-section">
+        <div className="section-header">
+          <h2>User Digest</h2>
+        </div>
+        {profile?.isSetupComplete ? (
+          <div className="profile-digest">
+            <div className="digest-person">
+              <strong>{profile.fullName || 'Candidate'}</strong>
+              {profile.headline && <span>{profile.headline}</span>}
+            </div>
+            <pre>{profile.userDigest || 'No digest generated yet. Save the profile once to create it.'}</pre>
+          </div>
+        ) : (
+          <p className="digest-empty">Profile setup is incomplete. Save the profile to generate a digest.</p>
+        )}
+      </section>
+
       <section className="metrics-grid" aria-label="Application metrics">
         <MetricCard label="Total Applied"       value={m.totalApplied}         icon="📨" accent="#6c63ff" sub={`+${m.todayApplied} today`} />
         <MetricCard label="In Consideration"    value={m.inConsideration}      icon="👀" accent="#4cc9f0" />
