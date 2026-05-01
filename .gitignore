@@ -1,0 +1,11 @@
+node_modules/
+.env
+dist/
+build/
+*.db
+*.db-shm
+*.db-wal
+.DS_Store
+uploads/
+data/
+logs/

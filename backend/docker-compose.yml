@@ -1,0 +1,110 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────────
+#  Job Scrapper — Local Daemon Stack
+#  Services: backend API + SQLite (via volume) + Cloudflare Tunnel
+# ─────────────────────────────────────────────────────────────
+
+services:
+
+  # ── 1. Node.js Backend + Playwright ────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: job-scrapper-backend
+    restart: always
+    ports:
+      - "127.0.0.1:5000:5000"   # Bind ONLY to localhost; tunnel exposes it externally
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      PLAYWRIGHT_HEADLESS: "true"
+
+      # Database path inside container (backed by volume)
+      DB_PATH: /app/data/jobscrapper.db
+      UPLOADS_PATH: /app/uploads
+
+      # Vercel frontend URL — CORS will ONLY allow this origin
+      ALLOWED_ORIGIN: ${ALLOWED_ORIGIN:-http://localhost:3000}
+
+      # JWT secret (change this to a long random string)
+      JWT_SECRET: ${JWT_SECRET:-CHANGE_THIS_SECRET_32_CHARS_MIN}
+
+      # SMTP / email config
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      ALERT_EMAIL: ${ALERT_EMAIL}
+
+      # Polling interval in minutes
+      POLL_INTERVAL_MINUTES: ${POLL_INTERVAL_MINUTES:-15}
+
+    volumes:
+      # Persist SQLite DB and uploaded resumes across container restarts
+      - scrapper_data:/app/data
+      - scrapper_uploads:/app/uploads
+      - scrapper_logs:/app/logs
+
+    healthcheck:
+      test: ["CMD", "node", "-e",
+        "require('http').get('http://localhost:5000/api/health', r => process.exit(r.statusCode===200?0:1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+    # Chromium needs shared memory
+    shm_size: "512mb"
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+  # ── 2. Cloudflare Tunnel ────────────────────────────────────
+  # HOW TO SET UP:
+  #   1. Install cloudflared locally: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+  #   2. Run: cloudflared tunnel login
+  #   3. Run: cloudflared tunnel create job-scrapper
+  #   4. Copy the tunnel UUID and credentials file path into .env
+  #   5. docker compose up -d
+  #
+  # Alternative (quick Ngrok — see ngrok profile below):
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: job-scrapper-tunnel
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+
+  # ── 3. Ngrok Alternative (comment out cloudflared, uncomment this) ──
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   container_name: job-scrapper-ngrok
+  #   restart: always
+  #   command: http backend:5000 --authtoken=${NGROK_AUTHTOKEN} --log=stdout
+  #   ports:
+  #     - "4040:4040"   # Ngrok web inspector
+  #   depends_on:
+  #     - backend
+  #   environment:
+  #     NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+
+volumes:
+  scrapper_data:
+    driver: local
+  scrapper_uploads:
+    driver: local
+  scrapper_logs:
+    driver: local
