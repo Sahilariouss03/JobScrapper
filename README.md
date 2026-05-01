@@ -64,17 +64,18 @@ Local Machine (Your PC — always on via Docker/PM2)
 | `ALLOWED_ORIGIN` | Vercel URL — only origin allowed by CORS |
 | `JWT_SECRET` | Signs dashboard login tokens (24h expiry) |
 | `DASHBOARD_PASSWORD` | Your login password |
-| `CLOUDFLARE_TUNNEL_TOKEN` | From `cloudflared tunnel token job-scrapper` |
+| `NGROK_AUTHTOKEN` | Your Ngrok authtoken |
+| `NGROK_DOMAIN` | Your static Ngrok domain (e.g. `your-domain.ngrok-free.dev`) |
 | `SMTP_USER / SMTP_PASS` | Gmail + App Password |
 | `PLAYWRIGHT_HEADLESS` | Auto-set to `true` by Dockerfile |
 
-## Cloudflare Tunnel Setup
+## Ngrok Tunnel Setup
 ```bash
-# Install: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
-cloudflared tunnel login
-cloudflared tunnel create job-scrapper
-# Copy the printed token into .env as CLOUDFLARE_TUNNEL_TOKEN
-# Then: docker compose up -d
+# 1. Sign up for Ngrok and get an Authtoken and a Free Static Domain
+# 2. Add them to your .env file as NGROK_AUTHTOKEN and NGROK_DOMAIN
+# 3. Start the system
+docker compose up -d
+# Ngrok dashboard available at: http://localhost:4040
 ```
 
 ## Deploy Frontend to Vercel

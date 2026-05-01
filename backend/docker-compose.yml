@@ -68,38 +68,19 @@ services:
       - NET_ADMIN
       - NET_RAW
 
-  # ── 2. Cloudflare Tunnel ────────────────────────────────────
-  # HOW TO SET UP:
-  #   1. Install cloudflared locally: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
-  #   2. Run: cloudflared tunnel login
-  #   3. Run: cloudflared tunnel create job-scrapper
-  #   4. Copy the tunnel UUID and credentials file path into .env
-  #   5. docker compose up -d
-  #
-  # Alternative (quick Ngrok — see ngrok profile below):
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: job-scrapper-tunnel
+  # ── 2. Ngrok Tunnel ─────────────────────────────────────────
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: job-scrapper-ngrok
     restart: always
-    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    command: http backend:5000 --domain=${NGROK_DOMAIN} --log=stdout
+    ports:
+      - "127.0.0.1:4040:4040"   # Ngrok web inspector
     depends_on:
       backend:
         condition: service_healthy
     environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
-
-  # ── 3. Ngrok Alternative (comment out cloudflared, uncomment this) ──
-  # ngrok:
-  #   image: ngrok/ngrok:latest
-  #   container_name: job-scrapper-ngrok
-  #   restart: always
-  #   command: http backend:5000 --authtoken=${NGROK_AUTHTOKEN} --log=stdout
-  #   ports:
-  #     - "4040:4040"   # Ngrok web inspector
-  #   depends_on:
-  #     - backend
-  #   environment:
-  #     NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
 
 volumes:
   scrapper_data:
